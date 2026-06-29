@@ -96,6 +96,17 @@ class Toolbar {
                 ["helpIcon", _("Help and shortcuts")],
                 ["helpGuideItem", _("Help"), "innerHTML"],
                 ["shortcutsGuideItem", _("Keyboard shortcuts"), "innerHTML"],
+                [
+                    "interactiveTutorialGuideItem",
+                    "<strong>" +
+                        _("Interactive Tutorial") +
+                        "</strong><br/><span style='font-size: 12px; font-weight: normal; color: var(--fg); opacity: 0.7; display: block; margin-top: 4px; line-height: 1.25;'>" +
+                        _(
+                            "Learn Music Blocks by building your first project through a guided interactive walkthrough."
+                        ) +
+                        "</span>",
+                    "innerHTML"
+                ],
                 ["runSlowlyIcon", _("Run slowly")],
                 ["runStepByStepIcon", _("Run step by step")],
                 ["displayStatsIcon", _("Display statistics")],
@@ -244,6 +255,17 @@ class Toolbar {
                 ["helpIcon", _("Help and shortcuts")],
                 ["helpGuideItem", _("Help"), "innerHTML"],
                 ["shortcutsGuideItem", _("Keyboard shortcuts"), "innerHTML"],
+                [
+                    "interactiveTutorialGuideItem",
+                    "<strong>" +
+                        _("Interactive Tutorial") +
+                        "</strong><br/><span style='font-size: 12px; font-weight: normal; color: var(--fg); opacity: 0.7; display: block; margin-top: 4px; line-height: 1.25;'>" +
+                        _(
+                            "Learn Music Blocks by building your first project through a guided interactive walkthrough."
+                        ) +
+                        "</span>",
+                    "innerHTML"
+                ],
                 ["runSlowlyIcon", _("Run slowly")],
                 ["runStepByStepIcon", _("Run step by step")],
                 ["displayStatsIcon", _("Display statistics")],
@@ -904,7 +926,7 @@ class Toolbar {
                         1.0
                     );
 
-                    if (svgData == "") {
+                    if (svgData === "") {
                         savePNG.disabled = true;
                         savePNG.className = "grey-text inactiveLink";
                     } else {
@@ -938,7 +960,7 @@ class Toolbar {
                 );
 
                 // if there is no mouse artwork to save then grey out
-                if (svgData == "") {
+                if (svgData === "") {
                     saveSVG.disabled = true;
                     savePNG.disabled = true;
                     saveSVG.className = "grey-text inactiveLink";
@@ -1170,7 +1192,7 @@ class Toolbar {
         menuIcon.onclick = () => {
             const searchBar = docById("search");
             searchBar.classList.toggle("open");
-            if (auxToolbar.style.display == "" || auxToolbar.style.display == "none") {
+            if (auxToolbar.style.display === "" || auxToolbar.style.display === "none") {
                 onclick(this.activity, false);
                 auxToolbar.style.display = "block";
                 menuIcon.innerHTML = "more_vert";
@@ -1210,11 +1232,13 @@ class Toolbar {
      * @param {Function} onclick - The onclick handler for the help icon.
      * @returns {void}
      */
-    renderHelpIcon(onclick, shortcutsOnclick) {
+    renderHelpIcon(onclick, shortcutsOnclick, tutorialOnclick) {
         const helpIcon = docById("helpIcon");
         const helpGuideItem = docById("helpGuideItem");
         const shortcutsGuideItem = docById("shortcutsGuideItem");
-        const hasDropdownMenu = !!helpGuideItem || !!shortcutsGuideItem;
+        const interactiveTutorialGuideItem = docById("interactiveTutorialGuideItem");
+        const hasDropdownMenu =
+            !!helpGuideItem || !!shortcutsGuideItem || !!interactiveTutorialGuideItem;
 
         if (helpGuideItem) {
             helpGuideItem.onclick = event => {
@@ -1234,6 +1258,18 @@ class Toolbar {
                 }
                 if (shortcutsOnclick) {
                     shortcutsOnclick(this.activity);
+                }
+            };
+        }
+
+        if (interactiveTutorialGuideItem) {
+            interactiveTutorialGuideItem.onclick = event => {
+                if (event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                if (tutorialOnclick) {
+                    tutorialOnclick(this.activity);
                 }
             };
         }

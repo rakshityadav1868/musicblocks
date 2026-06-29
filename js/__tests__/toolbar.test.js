@@ -103,14 +103,14 @@ describe("Toolbar Class", () => {
     test("sets correct strings for _THIS_IS_MUSIC_BLOCKS_ true", () => {
         global._THIS_IS_MUSIC_BLOCKS_ = true;
         toolbar.init({});
-        expect(global._).toHaveBeenCalledTimes(141);
+        expect(global._).toHaveBeenCalledTimes(143);
         expect(global._).toHaveBeenNthCalledWith(1, "About Music Blocks");
     });
 
     test("sets correct strings for _THIS_IS_MUSIC_BLOCKS_ false", () => {
         global._THIS_IS_MUSIC_BLOCKS_ = false;
         toolbar.init({});
-        expect(global._).toHaveBeenCalledTimes(123);
+        expect(global._).toHaveBeenCalledTimes(125);
         expect(global._).toHaveBeenNthCalledWith(1, "About Turtle Blocks");
     });
 
@@ -795,22 +795,26 @@ describe("Toolbar Class", () => {
         };
         const helpGuideItem = { onclick: null };
         const shortcutsGuideItem = { onclick: null };
+        const interactiveTutorialGuideItem = { onclick: null };
 
         global.docById.mockImplementation(id => {
             if (id === "helpIcon") return helpIcon;
             if (id === "helpGuideItem") return helpGuideItem;
             if (id === "shortcutsGuideItem") return shortcutsGuideItem;
+            if (id === "interactiveTutorialGuideItem") return interactiveTutorialGuideItem;
             return null;
         });
 
         const mockOnClick = jest.fn();
         const mockShortcutsOnClick = jest.fn();
+        const mockTutorialOnClick = jest.fn();
 
-        toolbar.renderHelpIcon(mockOnClick, mockShortcutsOnClick);
+        toolbar.renderHelpIcon(mockOnClick, mockShortcutsOnClick, mockTutorialOnClick);
 
         expect(helpIcon.onclick).toBeNull();
         expect(helpGuideItem.onclick).toBeInstanceOf(Function);
         expect(shortcutsGuideItem.onclick).toBeInstanceOf(Function);
+        expect(interactiveTutorialGuideItem.onclick).toBeInstanceOf(Function);
     });
 
     test("renderModeSelectIcon handles mode switching and UI updates", () => {

@@ -545,6 +545,21 @@ class FirstProjectTutorial {
     start() {
         this.isActive = true;
         this.currentStep = 0;
+
+        // Save the current blocks on the canvas
+        const activity = this._getActivity();
+        if (activity && typeof activity.prepareExport === "function") {
+            try {
+                const exported = activity.prepareExport();
+                this.savedBlocks = exported ? JSON.parse(exported) : null;
+            } catch (e) {
+                console.error("Failed to export current blocks", e);
+                this.savedBlocks = null;
+            }
+        } else {
+            this.savedBlocks = null;
+        }
+
         this._prepareCleanCanvas();
         this._createOverlay();
         this._setupKeyboardNav();
@@ -560,6 +575,33 @@ class FirstProjectTutorial {
         this._stopHintTimer();
         this._removeKeyboardNav();
         this._removeOverlay();
+
+        // Restore the saved blocks
+        const activity = this._getActivity();
+        if (activity) {
+            try {
+                if (activity.logo && typeof activity.logo.doStopTurtles === "function") {
+                    activity.logo.doStopTurtles();
+                }
+                if (activity.blocks && typeof activity.blocks.showBlocks === "function") {
+                    activity.blocks.showBlocks();
+                }
+                if (this.savedBlocks && this.savedBlocks.length > 0) {
+                    if (typeof activity.sendAllToTrash === "function") {
+                        activity.sendAllToTrash(false, true, true);
+                    }
+                    if (activity.blocks && typeof activity.blocks.loadNewBlocks === "function") {
+                        activity.blocks.loadNewBlocks(this.savedBlocks);
+                    }
+                } else {
+                    if (typeof activity.sendAllToTrash === "function") {
+                        activity.sendAllToTrash(true, false, true);
+                    }
+                }
+            } catch (e) {
+                console.error("Failed to restore saved blocks", e);
+            }
+        }
     }
 
     /**
@@ -621,30 +663,37 @@ class FirstProjectTutorial {
             z-index: 9999;
             pointer-events: none;
             transition: all 0.3s ease;
-            border: 3px solid #7C4DFF;
+            border: 3px solid #1e88e5;
         `;
 
-        // Tooltip
-        this.tooltip = document.createElement("div");
-        this.tooltip.id = "tutorial-tooltip";
-        this.tooltip.style.cssText = `
-            position: fixed;
-            background: #ffffff;
-            border-radius: 12px;
-            padding: 24px;
-            max-width: 380px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-            z-index: 10000;
-            font-family: 'Roboto', sans-serif;
-            color: #333;
-            pointer-events: auto;
-            border: none;
-            border-top: 4px solid #7C4DFF;
-        `;
+        // Create WidgetWindow
+        const widgetWindow = window.widgetWindows.windowFor(
+            this,
+            _("Interactive Tutorial"),
+            "interactive-tutorial",
+            false
+        );
+        widgetWindow.clear();
+        widgetWindow.show();
+        this.widgetWindow = widgetWindow;
+
+        widgetWindow.onclose = () => {
+            widgetWindow.destroy();
+            this.stop();
+        };
+
+        const widgetBody = widgetWindow.getWidgetBody();
+        widgetBody.className = "wfbWidget interactive-tutorial-widget";
+        widgetBody.style.padding = "24px";
+        widgetBody.style.display = "block";
+        widgetBody.style.width = "380px";
+        widgetBody.style.height = "auto";
+        widgetBody.style.overflow = "hidden";
+
+        this.tooltip = widgetBody;
 
         document.body.appendChild(this.overlay);
         document.body.appendChild(this.spotlight);
-        document.body.appendChild(this.tooltip);
     }
 
     /**
@@ -660,9 +709,12 @@ class FirstProjectTutorial {
             this.spotlight.remove();
             this.spotlight = null;
         }
-        if (this.tooltip) {
-            this.tooltip.remove();
+        if (this.widgetWindow) {
+            const win = this.widgetWindow;
+            this.widgetWindow = null;
             this.tooltip = null;
+            win.onclose = null;
+            win.destroy();
         }
     }
 
@@ -674,6 +726,27 @@ class FirstProjectTutorial {
     _showStep(stepIndex) {
         const step = this.steps[stepIndex];
         if (!step) return;
+
+        const activity = this._getActivity();
+        if (activity) {
+            this._playPressed = false;
+            try {
+                // Stop play if running
+                if (activity.logo && typeof activity.logo.doStopTurtles === "function") {
+                    activity.logo.doStopTurtles();
+                }
+            } catch (e) {
+                console.error("Tutorial: Failed to stop turtles:", e);
+            }
+            try {
+                // Restore workspace visibility
+                if (activity.blocks && typeof activity.blocks.showBlocks === "function") {
+                    activity.blocks.showBlocks();
+                }
+            } catch (e) {
+                console.error("Tutorial: Failed to show blocks:", e);
+            }
+        }
 
         this.actionCompleted = false;
 
@@ -712,11 +785,11 @@ class FirstProjectTutorial {
 
         // Phase colors
         const phaseColors = {
-            explore: { bg: "#E3F2FD", accent: "#1976D2", icon: "🔍" },
-            build: { bg: "#FFF3E0", accent: "#E65100", icon: "🔨" },
-            listen: { bg: "#E8F5E9", accent: "#2E7D32", icon: "🎧" },
-            personalize: { bg: "#F3E5F5", accent: "#7B1FA2", icon: "✨" },
-            reflect: { bg: "#FFF8E1", accent: "#F57F17", icon: "💭" }
+            explore: { bg: "#1a365d", accent: "#64B5F6", icon: "🔍" },
+            build: { bg: "#44240D", accent: "#FFB74D", icon: "🔨" },
+            listen: { bg: "#0D3A16", accent: "#81C784", icon: "🎧" },
+            personalize: { bg: "#370D44", accent: "#CE93D8", icon: "✨" },
+            reflect: { bg: "#443C0D", accent: "#FFE082", icon: "💭" }
         };
         const phase = phaseColors[step.phase] || phaseColors.explore;
 
@@ -724,7 +797,7 @@ class FirstProjectTutorial {
         const progressDots = this.steps
             .map((s, i) => {
                 const dotColor =
-                    i < stepIndex ? "#7C4DFF" : i === stepIndex ? "#7C4DFF" : "#E0E0E0";
+                    i < stepIndex ? "#0066FF" : i === stepIndex ? "#0066FF" : "#1a365d";
                 const dotSize = i === stepIndex ? "10px" : "6px";
                 return `<span style="
                     display: inline-block;
@@ -739,63 +812,44 @@ class FirstProjectTutorial {
             })
             .join("");
 
-        // Reflection steps get a special warm styling
-        const tooltipBorderColor = step.isReflection ? "#FFC107" : "#7C4DFF";
-        this.tooltip.style.borderTop = `4px solid ${tooltipBorderColor}`;
-
         this.tooltip.innerHTML = `
-            <div style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <span style="
-                        background: ${phase.bg};
-                        color: ${phase.accent};
-                        padding: 4px 10px;
-                        border-radius: 12px;
-                        font-size: 11px;
-                        font-weight: 600;
-                        text-transform: uppercase;
-                        letter-spacing: 0.5px;
-                    ">${phase.icon} ${step.phase}</span>
-                </div>
-                <button id="tutorial-close" style="
-                    background: transparent;
-                    border: none;
-                    color: #999;
-                    font-size: 20px;
-                    cursor: pointer;
-                    padding: 0 4px;
-                    line-height: 1;
-                    border-radius: 4px;
-                    transition: all 0.2s ease;
-                " onmouseover="this.style.color='#333';this.style.background='#f0f0f0';"
-                   onmouseout="this.style.color='#999';this.style.background='transparent';"
-                >×</button>
+            <div style="margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                <span style="
+                    background: ${phase.bg};
+                    color: ${phase.accent};
+                    padding: 4px 10px;
+                    border-radius: 12px;
+                    font-size: 11px;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                ">${phase.icon} ${step.phase}</span>
             </div>
             <h3 style="
                 margin: 0 0 10px 0;
                 font-size: 17px;
                 font-weight: 700;
-                color: #1a1a1a;
+                color: #ffffff;
                 line-height: 1.3;
             ">${step.title}</h3>
             <p style="
                 margin: 0 0 16px 0;
-                color: #555;
+                color: #b0c4de;
                 line-height: 1.6;
                 font-size: 13.5px;
             ">${step.content}</p>
             <div id="tutorial-challenge" style="
-                background: ${step.isReflection ? "#FFFDE7" : "#F5F5F5"};
+                background: ${step.isReflection ? "#2c2615" : "#0a1c30"};
                 padding: 12px 16px;
                 border-radius: 8px;
                 margin-bottom: 8px;
                 font-weight: 500;
                 font-size: 13px;
-                color: #333;
+                color: #ffffff;
                 display: flex;
                 align-items: center;
                 gap: 10px;
-                border-left: 3px solid ${step.isReflection ? "#FFC107" : phase.accent};
+                border-left: 3px solid ${step.isReflection ? "#FFD54F" : phase.accent};
             ">
                 <span id="challenge-icon" style="font-size: 16px;">${isCompleted ? "✅" : step.isReflection ? "💭" : "🎯"}</span>
                 <span id="challenge-text">${
@@ -808,37 +862,35 @@ class FirstProjectTutorial {
                     stepIndex > 0
                         ? `<button id="tutorial-prev" style="
                             padding: 10px 14px;
-                            background: #f5f5f5;
-                            border: 1px solid #e0e0e0;
+                            background: #1a365d;
+                            border: 1px solid #0066FF;
                             border-radius: 8px;
                             cursor: pointer;
                             font-size: 13px;
                             font-weight: 500;
-                            color: #666;
+                            color: #ffffff;
                             transition: all 0.2s ease;
-                        " onmouseover="this.style.background='#eee';"
-                           onmouseout="this.style.background='#f5f5f5';">← Back</button>`
+                        " onmouseover="this.style.background='#2b4c7e';"
+                           onmouseout="this.style.background='#1a365d';">← Back</button>`
                         : ""
                 }
                 <button id="tutorial-next" style="
                     flex: 1;
                     padding: 10px 20px;
-                    background: ${isCompleted ? "#7C4DFF" : "#ccc"};
-                    color: white;
+                    background: #0066FF;
+                    color: #ffffff;
                     border: none;
                     border-radius: 8px;
-                    cursor: ${isCompleted ? "pointer" : "not-allowed"};
+                    cursor: pointer;
                     font-size: 14px;
                     font-weight: 600;
-                    opacity: ${isCompleted ? "1" : "0.7"};
+                    opacity: 1;
                     transition: all 0.2s ease;
-                    ${isCompleted ? "box-shadow: 0 2px 8px rgba(124, 77, 255, 0.3);" : ""}
-                " ${isCompleted ? "" : "disabled"}
-                  ${isCompleted ? "onmouseover=\"this.style.background='#651FFF';\" onmouseout=\"this.style.background='#7C4DFF';\"" : ""}
-                >${step.isLast ? "🚀 " + _("Start Exploring!") : _("Next") + " →"}</button>
+                    box-shadow: 0 2px 8px rgba(0, 102, 255, 0.4);
+                " onmouseover="this.style.background='#0052cc';" onmouseout="this.style.background='#0066FF';">${step.isLast ? "🚀 " + _("Start Exploring!") : _("Next") + " →"}</button>
             </div>
             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
-                <span style="font-size: 10px; color: #aaa;">${_("Esc to close • ←→ to navigate")}</span>
+                <span style="font-size: 10px; color: #555555;">${_("Esc to close • ←→ to navigate")}</span>
                 <div>${progressDots}</div>
             </div>
         `;
@@ -867,7 +919,7 @@ class FirstProjectTutorial {
         const prevBtn = docById("tutorial-prev");
         const closeBtn = docById("tutorial-close");
 
-        if (nextBtn && isCompleted) {
+        if (nextBtn) {
             nextBtn.onclick = () => this.nextStep();
         }
         if (prevBtn) {
@@ -921,17 +973,17 @@ class FirstProjectTutorial {
         if (hintArea) hintArea.style.display = "none";
 
         if (nextBtn) {
-            nextBtn.style.background = "#7C4DFF";
+            nextBtn.style.background = "#0066FF";
             nextBtn.style.cursor = "pointer";
             nextBtn.style.opacity = "1";
-            nextBtn.style.boxShadow = "0 2px 8px rgba(124, 77, 255, 0.3)";
+            nextBtn.style.boxShadow = "0 2px 8px rgba(0, 102, 255, 0.4)";
             nextBtn.disabled = false;
             nextBtn.onclick = () => this.nextStep();
             nextBtn.onmouseover = () => {
-                nextBtn.style.background = "#651FFF";
+                nextBtn.style.background = "#0052cc";
             };
             nextBtn.onmouseout = () => {
-                nextBtn.style.background = "#7C4DFF";
+                nextBtn.style.background = "#0066FF";
             };
 
             // Subtle celebration: pulse the button
@@ -1007,7 +1059,7 @@ class FirstProjectTutorial {
 
         hintArea.innerHTML = `
             <a id="tutorial-hint-link" href="#" style="
-                color: #7C4DFF;
+                color: #0066FF;
                 font-size: 12px;
                 text-decoration: none;
                 font-weight: 500;
@@ -1041,13 +1093,13 @@ class FirstProjectTutorial {
 
         hintArea.innerHTML = `
             <div style="
-                background: #EDE7F6;
+                background: #0a1c30;
                 padding: 10px 14px;
                 border-radius: 6px;
                 font-size: 12.5px;
-                color: #4527A0;
+                color: #81D4FA;
                 line-height: 1.5;
-                border-left: 3px solid #7C4DFF;
+                border-left: 3px solid #0066FF;
             ">💡 ${step.hint}</div>
         `;
     }
@@ -1108,54 +1160,54 @@ class FirstProjectTutorial {
      * @private
      */
     _positionTooltip(targetElement, position) {
+        if (!this.widgetWindow) return;
+
         if (!targetElement || position === "center") {
-            this.tooltip.style.top = "50%";
-            this.tooltip.style.left = "50%";
-            this.tooltip.style.transform = "translate(-50%, -50%)";
+            this.widgetWindow.sendToCenter();
             return;
         }
 
         const rect = targetElement.getBoundingClientRect();
         const padding = 25;
 
-        this.tooltip.style.transform = "none";
-
+        let left, top;
         switch (position) {
             case "right":
-                this.tooltip.style.top = Math.max(20, rect.top) + "px";
-                this.tooltip.style.left = rect.right + padding + "px";
+                top = Math.max(20, rect.top);
+                left = rect.right + padding;
                 break;
             case "left":
-                this.tooltip.style.top = Math.max(20, rect.top) + "px";
-                this.tooltip.style.left = rect.left - 420 - padding + "px";
+                top = Math.max(20, rect.top);
+                left = rect.left - 420 - padding;
                 break;
             case "bottom":
-                this.tooltip.style.top = rect.bottom + padding + "px";
-                this.tooltip.style.left = Math.max(20, rect.left) + "px";
+                top = rect.bottom + padding;
+                left = Math.max(20, rect.left);
                 break;
             case "top":
-                this.tooltip.style.top = rect.top - 280 - padding + "px";
-                this.tooltip.style.left = Math.max(20, rect.left) + "px";
+                top = rect.top - 280 - padding;
+                left = Math.max(20, rect.left);
                 break;
             default:
-                this.tooltip.style.top = Math.max(20, rect.top) + "px";
-                this.tooltip.style.left = rect.right + padding + "px";
+                top = Math.max(20, rect.top);
+                left = rect.right + padding;
         }
 
         // Keep tooltip on screen
-        const tooltipRect = this.tooltip.getBoundingClientRect();
-        if (tooltipRect.right > window.innerWidth - 20) {
-            this.tooltip.style.left = window.innerWidth - 420 + "px";
+        if (left > window.innerWidth - 420) {
+            left = window.innerWidth - 420;
         }
-        if (tooltipRect.bottom > window.innerHeight - 20) {
-            this.tooltip.style.top = window.innerHeight - 380 + "px";
+        if (top > window.innerHeight - 380) {
+            top = window.innerHeight - 380;
         }
-        if (parseFloat(this.tooltip.style.left) < 20) {
-            this.tooltip.style.left = "20px";
+        if (left < 20) {
+            left = 20;
         }
-        if (parseFloat(this.tooltip.style.top) < 20) {
-            this.tooltip.style.top = "20px";
+        if (top < 64) {
+            top = 64; // Nav offset
         }
+
+        this.widgetWindow.setPosition(left, top);
     }
 
     // ========================================

@@ -7267,6 +7267,20 @@ class Activity {
             activity._showKeyboardShortcuts();
         };
 
+        const showInteractiveTutorial = activity => {
+            if (window.widgetWindows?.isOpen("help")) {
+                window.widgetWindows.clear("help");
+            }
+            if (window.widgetWindows?.isOpen("keyboard-shortcuts")) {
+                window.widgetWindows.clear("keyboard-shortcuts");
+            }
+            if (typeof FirstProjectTutorial !== "undefined") {
+                new FirstProjectTutorial(activity).start();
+            } else {
+                console.error("FirstProjectTutorial is not loaded");
+            }
+        };
+
         this._showKeyboardShortcuts = () => {
             const platformKeys = (windowsKeys, macKeys = windowsKeys) =>
                 `${_("Windows/Linux")}: ${windowsKeys}\n${_("Mac")}: ${macKeys}`;
@@ -8169,7 +8183,7 @@ class Activity {
             );
             this.toolbar.renderPlanetIcon(this.planet, doOpenSamples);
             this.toolbar.renderMenuIcon(showHideAuxMenu);
-            this.toolbar.renderHelpIcon(showHelp, showKeyboardShortcuts);
+            this.toolbar.renderHelpIcon(showHelp, showKeyboardShortcuts, showInteractiveTutorial);
             this.toolbar.renderModeSelectIcon(
                 doSwitchMode,
                 () => doRecordButton(this),
